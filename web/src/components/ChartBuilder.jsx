@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { api, authHeaders } from '../api'
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
 
 export default function ChartBuilder({ token }) {
   const [datasets, setDatasets] = useState([])
@@ -48,6 +48,8 @@ export default function ChartBuilder({ token }) {
   function Preview() {
     if (!rows.length || !xKey || !yKey) return <div className="text-sm text-gray-500">Select dataset/sheet and columns to preview.</div>
     const data = rows.map(r => ({ [xKey]: r[xKey], [yKey]: Number(r[yKey]) || 0 }))
+    const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#8dd1e1', '#a4de6c', '#d0ed57', '#ffc0cb']
+
     return (
       <div className="w-full h-80">
         <ResponsiveContainer>
@@ -56,20 +58,42 @@ export default function ChartBuilder({ token }) {
               <XAxis dataKey={xKey} />
               <YAxis />
               <Tooltip /><Legend />
-              <Bar dataKey={yKey} />
+              <Bar dataKey={yKey}>
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Bar>
             </BarChart>
           ) : chartType === 'line' ? (
             <LineChart data={data}>
               <XAxis dataKey={xKey} />
               <YAxis />
               <Tooltip /><Legend />
-              <Line dataKey={yKey} />
+              <Line dataKey={yKey} stroke="#8884d8" />
             </LineChart>
-          ) : (
+          ) : chartType === 'pie' ? (
             <PieChart>
-              <Pie data={data} dataKey={yKey} nameKey={xKey} outerRadius={120} label />
+              <Pie data={data} dataKey={yKey} nameKey={xKey} outerRadius={120} label>
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
             </PieChart>
-          )}
+          ) : chartType === 'area' ? (
+            <AreaChart data={data}>
+              <XAxis dataKey={xKey} />
+              <YAxis />
+              <Tooltip /><Legend />
+              <Area dataKey={yKey} fill="#82ca9d" stroke="#82ca9d" />
+            </AreaChart>
+          ) : chartType === 'radar' ? (
+            <RadarChart data={data}>
+              <PolarGrid />
+              <PolarAngleAxis dataKey={xKey} />
+              <PolarRadiusAxis />
+              <Radar name="Radar" dataKey={yKey} stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+            </RadarChart>
+          ) : null}
         </ResponsiveContainer>
       </div>
     )
@@ -98,6 +122,8 @@ export default function ChartBuilder({ token }) {
           <option value="bar">Bar</option>
           <option value="line">Line</option>
           <option value="pie">Pie</option>
+          <option value="area">Area</option>
+          <option value="radar">Radar</option>
         </select>
       </div>
       <input className="border px-2 py-1 rounded w-full" placeholder="Chart title" value={title} onChange={e=>setTitle(e.target.value)} />
