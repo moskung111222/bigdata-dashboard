@@ -2,6 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
+
 :root {
   --card: #ffffff;
+}
+
+.recharts-wrapper {
+  font-family: 'Prompt', 'Kanit', 'Noto Sans Thai', Arial, sans-serif;
+}
+
+.recharts-legend-item-text {
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.recharts-tooltip-label {
+  font-weight: bold;
+  color: #1976d2;
+}
+
+.recharts-tooltip-item-list {
+  font-size: 1rem;
+}
+
+.recharts-surface {
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.08));
+}
+
+.recharts-bar-rectangle {
+  stroke: #fff;
+  stroke-width: 2px;
+}
+
+.recharts-pie-sector {
+  stroke: #fff;
+  stroke-width: 2px;
 }

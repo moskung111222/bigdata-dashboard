@@ -7,16 +7,16 @@ import LoginForm from './components/LoginForm'
 
 function Navbar({ token, onLogout }) {
   return (
-    <div className="w-full bg-gray-800 text-white px-4 py-3 flex items-center justify-between">
+    <div className="w-full bg-gradient-to-r from-blue-500 via-pink-400 to-yellow-400 text-white px-4 py-4 flex items-center justify-between shadow-lg">
       <div className="flex items-center gap-4">
-        <Link to="/" className="font-semibold">BigData Dashboard</Link>
-        <Link to="/public">Public</Link>
-        {token && <Link to="/admin">Admin</Link>}
+        <Link to="/" className="font-bold text-xl tracking-wide drop-shadow">แดชบอร์ดข้อมูล (BigData)</Link>
+        <Link to="/public" className="hover:underline">สาธารณะ</Link>
+        {token && <Link to="/admin" className="hover:underline">ผู้ดูแล</Link>}
       </div>
       <div>
         {token
-          ? <button className="bg-gray-700 px-3 py-1 rounded" onClick={onLogout}>Logout</button>
-          : <Link to="/login" className="bg-gray-700 px-3 py-1 rounded">Login</Link>}
+          ? <button className="bg-white text-pink-600 font-semibold px-4 py-1 rounded-lg shadow hover:bg-pink-100" onClick={onLogout}>ออกจากระบบ</button>
+          : <Link to="/login" className="bg-white text-blue-600 font-semibold px-4 py-1 rounded-lg shadow hover:bg-blue-100">เข้าสู่ระบบ</Link>}
       </div>
     </div>
   )
@@ -33,7 +33,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-pink-50 to-blue-100">
       <Navbar token={token} onLogout={handleLogout} />
       <div className="max-w-6xl mx-auto p-4">
         <Routes>

@@ -20,17 +20,17 @@ export default function ImportGoogleSheet({ token, onImported }) {
   }
 
   return (
-    <div className="bg-white p-4 rounded-xl shadow">
-      <h2 className="font-semibold mb-2">Import Google Sheet</h2>
+    <div className="bg-white p-6 rounded-xl shadow border border-blue-100">
+      <h2 className="font-bold text-lg text-blue-600 mb-2">นำเข้าข้อมูล Google Sheet</h2>
       <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-4 gap-2">
-        <input className="border px-2 py-1 rounded" placeholder="Name" value={name} onChange={e=>setName(e.target.value)} />
-        <input className="border px-2 py-1 rounded" placeholder="Sheet ID" value={sheetId} onChange={e=>setSheetId(e.target.value)} />
-        <input className="border px-2 py-1 rounded" placeholder="Range (optional)" value={range} onChange={e=>setRange(e.target.value)} />
-        <button className="bg-black text-white px-3 py-1 rounded">Import</button>
+        <input className="border px-2 py-2 rounded-lg bg-blue-50" placeholder="ชื่อชุดข้อมูล" value={name} onChange={e=>setName(e.target.value)} />
+        <input className="border px-2 py-2 rounded-lg bg-blue-50" placeholder="Sheet ID" value={sheetId} onChange={e=>setSheetId(e.target.value)} />
+        <input className="border px-2 py-2 rounded-lg bg-blue-50" placeholder="ช่วงข้อมูล (A1:Z10000)" value={range} onChange={e=>setRange(e.target.value)} />
+        <button className="bg-gradient-to-r from-blue-500 to-pink-500 text-white px-4 py-2 rounded-lg shadow hover:scale-105 transition-transform">นำเข้า</button>
       </form>
       <div className="text-sm mt-1">{status}</div>
       <p className="text-xs text-gray-500 mt-2">
-        Share the Google Sheet with your service account email (from <code>server/service-account.json</code>).
+        กรุณาแชร์ Google Sheet ให้กับอีเมล service account (จาก <code>server/service-account.json</code>)
       </p>
     </div>
   )

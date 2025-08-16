@@ -2,6 +2,11 @@ import React, { useEffect, useState } from 'react'
 import { api, authHeaders } from '../api'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
 
+// Color palette for advanced colorful charts
+const COLORS = [
+  '#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff', '#ff9f40', '#e57373', '#81c784', '#64b5f6', '#ffd54f', '#ba68c8', '#4dd0e1', '#f06292', '#aed581', '#fff176', '#9575cd', '#4fc3f7', '#ffb74d', '#a1887f', '#90a4ae'
+]
+
 export default function ChartBuilder({ token }) {
   const [datasets, setDatasets] = useState([])
   const [selected, setSelected] = useState(null)
@@ -46,19 +51,18 @@ export default function ChartBuilder({ token }) {
   }
 
   function Preview() {
-    if (!rows.length || !xKey || !yKey) return <div className="text-sm text-gray-500">Select dataset/sheet and columns to preview.</div>
+    if (!rows.length || !xKey || !yKey) return <div className="text-sm text-gray-500">กรุณาเลือกชุดข้อมูล/ชีท และคอลัมน์เพื่อดูตัวอย่างกราฟ</div>
     const data = rows.map(r => ({ [xKey]: r[xKey], [yKey]: Number(r[yKey]) || 0 }))
-    const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#8dd1e1', '#a4de6c', '#d0ed57', '#ffc0cb']
-
     return (
-      <div className="w-full h-80">
+      <div className="w-full h-96 bg-gradient-to-br from-blue-50 to-pink-50 rounded-xl p-4 shadow-inner">
         <ResponsiveContainer>
           {chartType === 'bar' ? (
             <BarChart data={data}>
-              <XAxis dataKey={xKey} />
-              <YAxis />
-              <Tooltip /><Legend />
-              <Bar dataKey={yKey}>
+              <XAxis dataKey={xKey} tick={{fontWeight:'bold',fontSize:13}}/>
+              <YAxis tick={{fontWeight:'bold',fontSize:13}}/>
+              <Tooltip wrapperStyle={{fontSize:14}}/>
+              <Legend />
+              <Bar dataKey={yKey} radius={[8,8,0,0]}>
                 {data.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
@@ -66,10 +70,11 @@ export default function ChartBuilder({ token }) {
             </BarChart>
           ) : chartType === 'line' ? (
             <LineChart data={data}>
-              <XAxis dataKey={xKey} />
-              <YAxis />
-              <Tooltip /><Legend />
-              <Line dataKey={yKey} stroke="#8884d8" />
+              <XAxis dataKey={xKey} tick={{fontWeight:'bold',fontSize:13}}/>
+              <YAxis tick={{fontWeight:'bold',fontSize:13}}/>
+              <Tooltip wrapperStyle={{fontSize:14}}/>
+              <Legend />
+              <Line dataKey={yKey} stroke="#36a2eb" strokeWidth={3} dot={{r:5,stroke:'#fff',strokeWidth:2}}/>
             </LineChart>
           ) : chartType === 'pie' ? (
             <PieChart>
@@ -78,20 +83,25 @@ export default function ChartBuilder({ token }) {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
+              <Tooltip wrapperStyle={{fontSize:14}}/>
+              <Legend />
             </PieChart>
           ) : chartType === 'area' ? (
             <AreaChart data={data}>
-              <XAxis dataKey={xKey} />
-              <YAxis />
-              <Tooltip /><Legend />
-              <Area dataKey={yKey} fill="#82ca9d" stroke="#82ca9d" />
+              <XAxis dataKey={xKey} tick={{fontWeight:'bold',fontSize:13}}/>
+              <YAxis tick={{fontWeight:'bold',fontSize:13}}/>
+              <Tooltip wrapperStyle={{fontSize:14}}/>
+              <Legend />
+              <Area dataKey={yKey} fill="#ffce56" stroke="#ff6384" strokeWidth={3} />
             </AreaChart>
           ) : chartType === 'radar' ? (
             <RadarChart data={data}>
               <PolarGrid />
-              <PolarAngleAxis dataKey={xKey} />
-              <PolarRadiusAxis />
-              <Radar name="Radar" dataKey={yKey} stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+              <PolarAngleAxis dataKey={xKey} tick={{fontWeight:'bold',fontSize:13}}/>
+              <PolarRadiusAxis tick={{fontWeight:'bold',fontSize:13}}/>
+              <Radar name="Radar" dataKey={yKey} stroke="#36a2eb" fill="#36a2eb" fillOpacity={0.5} />
+              <Tooltip wrapperStyle={{fontSize:14}}/>
+              <Legend />
             </RadarChart>
           ) : null}
         </ResponsiveContainer>
@@ -100,38 +110,38 @@ export default function ChartBuilder({ token }) {
   }
 
   return (
-    <div className="bg-white p-4 rounded-xl shadow space-y-3">
-      <h2 className="font-semibold">Chart Builder</h2>
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-        <select className="border px-2 py-1 rounded" value={selected||''} onChange={e=>setSelected(Number(e.target.value))}>
-          <option value="">Select Dataset</option>
+    <div className="bg-white p-6 rounded-2xl shadow-lg space-y-4 border border-blue-100">
+      <h2 className="font-bold text-2xl text-blue-700 mb-2">สร้างกราฟข้อมูล (Chart Builder)</h2>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <select className="border px-2 py-2 rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300" value={selected||''} onChange={e=>setSelected(Number(e.target.value))}>
+          <option value="">เลือกชุดข้อมูล</option>
           {datasets.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
-        <select className="border px-2 py-1 rounded" value={sheet} onChange={e=>setSheet(e.target.value)}>
+        <select className="border px-2 py-2 rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300" value={sheet} onChange={e=>setSheet(e.target.value)}>
           {tables.map(t => <option key={t.id} value={t.sheet_name}>{t.sheet_name}</option>)}
         </select>
-        <select className="border px-2 py-1 rounded" value={xKey} onChange={e=>setXKey(e.target.value)}>
-          <option value="">X (category)</option>
+        <select className="border px-2 py-2 rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300" value={xKey} onChange={e=>setXKey(e.target.value)}>
+          <option value="">แกน X (หมวดหมู่)</option>
           {currentCols.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
-        <select className="border px-2 py-1 rounded" value={yKey} onChange={e=>setYKey(e.target.value)}>
-          <option value="">Y (value)</option>
+        <select className="border px-2 py-2 rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300" value={yKey} onChange={e=>setYKey(e.target.value)}>
+          <option value="">แกน Y (ค่า)</option>
           {currentCols.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
-        <select className="border px-2 py-1 rounded" value={chartType} onChange={e=>setChartType(e.target.value)}>
-          <option value="bar">Bar</option>
-          <option value="line">Line</option>
-          <option value="pie">Pie</option>
-          <option value="area">Area</option>
-          <option value="radar">Radar</option>
+        <select className="border px-2 py-2 rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300" value={chartType} onChange={e=>setChartType(e.target.value)}>
+          <option value="bar">กราฟแท่ง (Bar)</option>
+          <option value="line">กราฟเส้น (Line)</option>
+          <option value="pie">กราฟวงกลม (Pie)</option>
+          <option value="area">กราฟพื้นที่ (Area)</option>
+          <option value="radar">กราฟเรดาร์ (Radar)</option>
         </select>
       </div>
-      <input className="border px-2 py-1 rounded w-full" placeholder="Chart title" value={title} onChange={e=>setTitle(e.target.value)} />
+      <input className="border px-2 py-2 rounded-lg w-full bg-yellow-50 focus:ring-2 focus:ring-yellow-300" placeholder="ชื่อกราฟ" value={title} onChange={e=>setTitle(e.target.value)} />
       <label className="text-sm flex items-center gap-2">
-        <input type="checkbox" checked={isPublic} onChange={e=>setIsPublic(e.target.checked)} /> Public
+        <input type="checkbox" checked={isPublic} onChange={e=>setIsPublic(e.target.checked)} /> สาธารณะ (Public)
       </label>
       <Preview />
-      <div><button className="bg-black text-white px-3 py-1 rounded" onClick={saveChart}>Save Chart</button></div>
+      <div><button className="bg-gradient-to-r from-blue-500 to-pink-500 text-white px-5 py-2 rounded-lg shadow hover:scale-105 transition-transform" onClick={saveChart}>บันทึกกราฟ</button></div>
     </div>
   )
 }
