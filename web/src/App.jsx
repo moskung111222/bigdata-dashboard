@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom'
 import AdminDashboard from './pages/AdminDashboard'
+import ManageDatasets from './pages/ManageDatasets'
 import PublicView from './pages/PublicView'
 import DatasetDetail from './pages/DatasetDetail'
 import LoginForm from './components/LoginForm'
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="/dataset/:id" element={<DatasetDetail />} />
           <Route path="/login" element={<LoginForm onLogin={(t)=>{localStorage.setItem('token', t); setToken(t); navigate('/admin')}} />} />
           <Route path="/admin" element={token ? <AdminDashboard token={token} /> : <Navigate to="/login" replace />} />
+          <Route path="/manage-datasets" element={token ? <ManageDatasets token={token} /> : <Navigate to="/login" replace />} />
         </Routes>
       </div>
     </div>
