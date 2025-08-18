@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import xlsx from 'xlsx';
 import { authRequired } from '../auth.js';
-import { run } from '../db.js';
+import { Dataset } from '../models.js';
 import { readSheetWithServiceAccount } from '../utils/sheets.js';
 import { GOOGLE_APPLICATION_CREDENTIALS } from '../config.js';
 
@@ -33,17 +33,8 @@ router.post('/google/import', authRequired, async (req, res) => {
     xlsx.writeFile(wb, filePath);
 
     const slug = name.toLowerCase().replace(/[^\w]+/g, '-').replace(/(^-|-$)/g, '');
-    const result = await run(
-      'INSERT INTO datasets (name, slug, source_type, file_path, google_sheet_id, public) VALUES (?,?,?,?,?,1)',
-      [name, slug, 'google', filePath, sheetId]
-    );
-    const datasetId = result.lastID;
-
-    // Only one table (Sheet1) here
-    await run('INSERT INTO dataset_tables (dataset_id, sheet_name, columns_json, row_count) VALUES (?,?,?,?)',
-      [datasetId, 'Sheet1', JSON.stringify(headers), rows.length]);
-
-    res.json({ id: datasetId, name, slug, sheetId, range: range || 'A1:Z10000', rowsImported: rows.length });
+  const doc = await Dataset.create({ name, slug, source_type: 'google', file_path: filePath, google_sheet_id: sheetId, public: true, tables: [{ sheet_name: 'Sheet1', columns_json: headers, row_count: rows.length }] });
+  res.json({ id: doc._id, name, slug, sheetId, range: range || 'A1:Z10000', rowsImported: rows.length });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: e.message });
