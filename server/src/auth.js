@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD } from './config.js';
-import { get, run } from './db.js';
+import { User } from './models.js';
 
 export function authRequired(req, res, next) {
   const header = req.headers.authorization || '';
@@ -17,13 +17,13 @@ export function authRequired(req, res, next) {
 }
 
 export async function seedAdmin() {
-  const existing = await get('SELECT * FROM users WHERE email = ?', [ADMIN_EMAIL]);
+  const existing = await User.findOne({ email: ADMIN_EMAIL }).exec();
   if (existing) return;
   const hash = await bcrypt.hash(ADMIN_PASSWORD, 10);
-  await run('INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)', [ADMIN_EMAIL, hash, 'admin']);
+  await User.create({ email: ADMIN_EMAIL, password_hash: hash, role: 'admin' });
   console.log(`[seed] Created admin account: ${ADMIN_EMAIL}`);
 }
 
 export function sign(user) {
-  return jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ id: user._id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 }

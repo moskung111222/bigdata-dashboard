@@ -1,8 +1,12 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import fs from 'fs';
-import { all, get, run } from '../db.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+import { Dataset, Chart } from '../models.js';
 import { authRequired } from '../auth.js';
 import { readWorkbookMeta, readSheetRows } from '../utils/excel.js';
 
@@ -16,22 +20,90 @@ const storage = multer.diskStorage({
     cb(null, safe);
   }
 });
+
+
+
+
 const upload = multer({ storage });
 
+
+
+const DATA_DIR = path.join(__dirname, '../../../demo_data');
+const STYLE_FILE = path.join(__dirname, '../../styles.json');
+
+// List datasets (with optional search)
 router.get('/datasets', async (req, res) => {
+  const q = req.query.q || null;
   const admin = req.query.admin === '1';
-  const rows = admin
-    ? await all('SELECT * FROM datasets ORDER BY id DESC')
-    : await all('SELECT * FROM datasets WHERE public = 1 ORDER BY id DESC');
+  const filter = {};
+  if (!admin) filter.public = true;
+  if (q) filter.$or = [ { name: new RegExp(q, 'i') }, { slug: new RegExp(q, 'i') } ];
+  const rows = await Dataset.find(filter).sort({ createdAt: -1 }).lean().exec();
   res.json(rows);
+});
+
+// List files
+router.get('/files', (req, res) => {
+  fs.readdir(DATA_DIR, (err, files) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(files);
+  });
+});
+
+// Get file content (as download or preview)
+router.get('/files/:filename', (req, res) => {
+  const filePath = path.join(DATA_DIR, req.params.filename);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File not found' });
+  res.sendFile(filePath);
+});
+
+// Upload file
+router.post('/files', upload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  const dest = path.join(DATA_DIR, req.file.originalname);
+  fs.rename(req.file.path, dest, err => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, filename: req.file.originalname });
+  });
+});
+
+// Delete file
+router.delete('/files/:filename', (req, res) => {
+  const filePath = path.join(DATA_DIR, req.params.filename);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File not found' });
+  fs.unlink(filePath, err => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+// Update file (replace)
+router.put('/files/:filename', upload.single('file'), (req, res) => {
+  const filePath = path.join(DATA_DIR, req.params.filename);
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  fs.rename(req.file.path, filePath, err => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+// Get style settings
+router.get('/styles', (req, res) => {
+  if (!fs.existsSync(STYLE_FILE)) return res.json({});
+  res.json(JSON.parse(fs.readFileSync(STYLE_FILE, 'utf8')));
+});
+
+// Update style settings
+router.post('/styles', (req, res) => {
+  fs.writeFileSync(STYLE_FILE, JSON.stringify(req.body, null, 2));
+  res.json({ success: true });
 });
 
 router.get('/datasets/:id/tables', async (req, res) => {
   const id = req.params.id;
-  const ds = await get('SELECT * FROM datasets WHERE id = ?', [id]);
+  const ds = await Dataset.findById(id).lean().exec();
   if (!ds) return res.status(404).json({ error: 'Not found' });
-  const tables = await all('SELECT * FROM dataset_tables WHERE dataset_id = ?', [id]);
-  res.json({ dataset: ds, tables });
+  res.json({ dataset: ds, tables: ds.tables || [] });
 });
 
 router.get('/datasets/:id/data', async (req, res) => {
@@ -39,7 +111,7 @@ router.get('/datasets/:id/data', async (req, res) => {
   const sheet = req.query.sheet;
   const limit = Math.max(1, Math.min(parseInt(req.query.limit || '200'), 1000));
   const offset = Math.max(0, parseInt(req.query.offset || '0'));
-  const ds = await get('SELECT * FROM datasets WHERE id = ?', [id]);
+  const ds = await Dataset.findById(id).lean().exec();
   if (!ds) return res.status(404).json({ error: 'Not found' });
   const { rows, total } = readSheetRows(ds.file_path, sheet, limit, offset);
   res.json({ rows, total, limit, offset });
@@ -47,7 +119,7 @@ router.get('/datasets/:id/data', async (req, res) => {
 
 router.get('/datasets/:id/download', async (req, res) => {
   const id = req.params.id;
-  const ds = await get('SELECT * FROM datasets WHERE id = ?', [id]);
+  const ds = await Dataset.findById(id).lean().exec();
   if (!ds || !fs.existsSync(ds.file_path)) return res.status(404).json({ error: 'File not found' });
   res.download(ds.file_path, path.basename(ds.file_path));
 });
@@ -57,16 +129,8 @@ router.post('/datasets/upload', authRequired, upload.single('file'), async (req,
   const name = req.body.name || req.file.originalname;
   const meta = readWorkbookMeta(filePath);
   const slug = name.toLowerCase().replace(/[^\w]+/g, '-').replace(/(^-|-$)/g, '');
-  const result = await run(
-    'INSERT INTO datasets (name, slug, source_type, file_path, public) VALUES (?,?,?,?,1)',
-    [name, slug, 'excel', filePath]
-  );
-  const datasetId = result.lastID;
-  for (const t of meta.tables) {
-    await run('INSERT INTO dataset_tables (dataset_id, sheet_name, columns_json, row_count) VALUES (?,?,?,?)',
-      [datasetId, t.sheet_name, JSON.stringify(t.columns), t.row_count]);
-  }
-  res.json({ id: datasetId, name, slug, tables: meta.tables });
+  const doc = await Dataset.create({ name, slug, source_type: 'excel', file_path: filePath, public: true, tables: meta.tables.map(t => ({ sheet_name: t.sheet_name, columns_json: t.columns, row_count: t.row_count })) });
+  res.json({ id: doc._id, name, slug, tables: meta.tables });
 });
 
 router.post('/charts', authRequired, async (req, res) => {
@@ -74,40 +138,31 @@ router.post('/charts', authRequired, async (req, res) => {
   if (!title || !chart_type || !dataset_id || !sheet_name || !config) {
     return res.status(400).json({ error: 'Missing fields' });
   }
-  const result = await run(
-    'INSERT INTO charts (title, chart_type, dataset_id, sheet_name, config_json, public, sort_order) VALUES (?,?,?,?,?, ?, ?)',
-    [title, chart_type, dataset_id, sheet_name, JSON.stringify(config), config.public ? 1 : 0, Number(config.sort_order || 0)]
-  );
-  res.json({ id: result.lastID });
+  const doc = await Chart.create({ title, chart_type, dataset_id, sheet_name, config_json: config, public: !!config.public, sort_order: Number(config.sort_order || 0) });
+  res.json({ id: doc._id });
 });
 
 router.get('/charts', authRequired, async (req, res) => {
-  const rows = await all(`SELECT c.*, d.name as dataset_name
-                          FROM charts c JOIN datasets d ON d.id = c.dataset_id
-                          ORDER BY c.sort_order ASC, c.id DESC`);
-  res.json(rows);
+  const rows = await Chart.find().sort({ sort_order: 1, createdAt: -1 }).populate('dataset_id', 'name').lean().exec();
+  res.json(rows.map(r => ({ ...r, dataset_name: r.dataset_id ? r.dataset_id.name : null })));
 });
 
 router.get('/charts/public', async (req, res) => {
-  const rows = await all(`SELECT c.*, d.name as dataset_name, d.file_path
-                          FROM charts c JOIN datasets d ON d.id = c.dataset_id
-                          WHERE c.public = 1
-                          ORDER BY c.sort_order ASC, c.id DESC`);
-  res.json(rows);
+  const rows = await Chart.find({ public: true }).sort({ sort_order: 1, createdAt: -1 }).populate('dataset_id', 'name file_path').lean().exec();
+  res.json(rows.map(r => ({ ...r, dataset_name: r.dataset_id ? r.dataset_id.name : null, file_path: r.dataset_id ? r.dataset_id.file_path : null })));
 });
 
 router.put('/charts/:id', authRequired, async (req, res) => {
   const id = req.params.id;
   const { title, chart_type, config, public: isPublic, sort_order } = req.body;
-  const row = await get('SELECT * FROM charts WHERE id = ?', [id]);
+  const row = await Chart.findById(id).exec();
   if (!row) return res.status(404).json({ error: 'Not found' });
-  await run('UPDATE charts SET title=?, chart_type=?, config_json=?, public=?, sort_order=? WHERE id=?',
-    [title || row.title,
-     chart_type || row.chart_type,
-     JSON.stringify(config || JSON.parse(row.config_json)),
-     typeof isPublic === 'number' ? isPublic : row.public,
-     typeof sort_order === 'number' ? sort_order : row.sort_order,
-     id]);
+  row.title = title || row.title;
+  row.chart_type = chart_type || row.chart_type;
+  row.config_json = config || row.config_json;
+  row.public = typeof isPublic === 'boolean' ? isPublic : row.public;
+  row.sort_order = typeof sort_order === 'number' ? sort_order : row.sort_order;
+  await row.save();
   res.json({ ok: true });
 });
 

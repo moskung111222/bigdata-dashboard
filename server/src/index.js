@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { PORT, CLIENT_ORIGIN } from './config.js';
 import { initSchema } from './models.js';
 import { seedAdmin } from './auth.js';
+import { connectDB } from './db.js';
 import authRoutes from './routes/auth.js';
 import datasetRoutes from './routes/datasets.js';
 import googleRoutes from './routes/google.js';
@@ -27,6 +28,7 @@ app.use('/api', googleRoutes);
 app.get('/', (_, res) => res.json({ ok: true, service: 'bigdata-dashboard-server' }));
 
 app.listen(PORT, async () => {
+  await connectDB();
   await initSchema();
   await seedAdmin();
   console.log(`API running on http://localhost:${PORT}`);

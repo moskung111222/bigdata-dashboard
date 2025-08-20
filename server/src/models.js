@@ -1,43 +1,44 @@
-import { run } from './db.js';
+import mongoose from 'mongoose';
+
+const UserSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  password_hash: { type: String, required: true },
+  role: { type: String, default: 'admin' }
+}, { timestamps: true });
+
+const DatasetTableSchema = new mongoose.Schema({
+  sheet_name: String,
+  columns_json: Object,
+  row_count: Number
+}, { _id: false });
+
+const DatasetSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  slug: { type: String, unique: true },
+  source_type: { type: String, enum: ['excel', 'google'], required: true },
+  file_path: String,
+  google_sheet_id: String,
+  public: { type: Boolean, default: true },
+  tables: [DatasetTableSchema]
+}, { timestamps: true });
+
+const ChartSchema = new mongoose.Schema({
+  title: String,
+  chart_type: { type: String, enum: ['bar','line','pie'] },
+  dataset_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Dataset' },
+  sheet_name: String,
+  config_json: Object,
+  public: { type: Boolean, default: true },
+  sort_order: { type: Number, default: 0 }
+}, { timestamps: true });
+
+export const User = mongoose.model('User', UserSchema);
+export const Dataset = mongoose.model('Dataset', DatasetSchema);
+export const Chart = mongoose.model('Chart', ChartSchema);
 
 export async function initSchema() {
-  await run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE,
-    password_hash TEXT NOT NULL,
-    role TEXT DEFAULT 'admin'
-  )`);
-
-  await run(`CREATE TABLE IF NOT EXISTS datasets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    slug TEXT UNIQUE,
-    source_type TEXT CHECK(source_type IN ('excel','google')) NOT NULL,
-    file_path TEXT,
-    google_sheet_id TEXT,
-    public INTEGER DEFAULT 1,
-    created_at TEXT DEFAULT (datetime('now'))
-  )`);
-
-  await run(`CREATE TABLE IF NOT EXISTS dataset_tables (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    dataset_id INTEGER NOT NULL,
-    sheet_name TEXT NOT NULL,
-    columns_json TEXT,
-    row_count INTEGER,
-    FOREIGN KEY(dataset_id) REFERENCES datasets(id) ON DELETE CASCADE
-  )`);
-
-  await run(`CREATE TABLE IF NOT EXISTS charts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    chart_type TEXT CHECK(chart_type IN ('bar','line','pie')) NOT NULL,
-    dataset_id INTEGER NOT NULL,
-    sheet_name TEXT NOT NULL,
-    config_json TEXT NOT NULL,
-    public INTEGER DEFAULT 1,
-    sort_order INTEGER DEFAULT 0,
-    created_at TEXT DEFAULT (datetime('now')),
-    FOREIGN KEY(dataset_id) REFERENCES datasets(id) ON DELETE CASCADE
-  )`);
+  // with mongoose models, indexes are created automatically when needed
+  await User.init();
+  await Dataset.init();
+  await Chart.init();
 }

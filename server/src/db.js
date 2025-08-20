@@ -1,40 +1,11 @@
-import sqlite3 from 'sqlite3';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
+import mongoose from 'mongoose';
+import { MONGO_URI } from './config.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const dataDir = path.join(__dirname, '..', 'data');
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-
-const dbPath = path.join(dataDir, 'db.sqlite');
-export const db = new sqlite3.Database(dbPath);
-
-export function run(sql, params=[]) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function(err) {
-      if (err) return reject(err);
-      resolve(this);
-    });
-  });
+export async function connectDB() {
+  const uri = MONGO_URI || 'mongodb://localhost:27017';
+  if (!MONGO_URI) console.log('[db] MONGO_URI not set, defaulting to mongodb://localhost:27017 (dev)');
+  await mongoose.connect(uri, { dbName: 'bigdata_dashboard' });
+  console.log('[db] Connected to MongoDB at', uri);
 }
 
-export function all(sql, params=[]) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) return reject(err);
-      resolve(rows);
-    });
-  });
-}
-
-export function get(sql, params=[]) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) return reject(err);
-      resolve(row);
-    });
-  });
-}
+export const mongooseInstance = mongoose;
